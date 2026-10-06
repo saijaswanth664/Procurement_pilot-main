@@ -1,0 +1,57 @@
+---
+description: ProcurementPilot source of truth — product, stack, schema, build order
+alwaysApply: true
+---
+
+# ProcurementPilot — source of truth
+
+Procurement co-pilot for small D2C brands. Demo persona: **AyuraNest** (Ayurvedic wellness: Ashwagandha, Amla, Turmeric, Neem, oils). Watches suppliers, predicts delivery on price/quality/time/capacity, splits the next order to minimize cost+risk, re-plans live on disruption. Hackathon judging: real engineering, live disruption demo, quantified impact — not a static dashboard or LLM pretending to optimize.
+
+## Non-negotiables
+
+1. Allocation is a **real solver** (PuLP or OR-Tools), never an LLM. UI "How was this computed?" shows the actual objective + constraints.
+2. **Live disruption → re-plan**: trigger price/capacity/reliability change, allocation and dashboard recompute on stage.
+3. Explanations use **computed numbers** fed to the Explainer, not invented prose.
+4. **Single-supplier / rule-based baseline** side-by-side with % cost and risk improvement.
+5. Frontend is a real product (React+Vite+TS+Tailwind+shadcn), not Streamlit.
+
+## Locked stack
+
+- Backend: Supabase (Postgres, auth, storage, edge functions). Prefer Supabase MCP when connected; otherwise `supabase db diff` / `supabase migration new`. Do not guess table state. App client: `@supabase/supabase-js` with project URL + anon key (service-role key server-only). Never InsForge.
+- Photos/PDFs: Cloudinary; store only `secure_url` / `public_id` in Postgres.
+- Local inference: Ollama VLM (batch photos) + Qwen2.5:9b (explainer/classifier). Zero paid LLM APIs.
+- Agents: CrewAI — Forecasting → Optimization → Disruption-monitor → Explainer + Message-classifier.
+- Predictions: XGBoost/LightGBM or ridge — inspectable, no deep learning.
+- Maps: Google Maps JS + Directions (simulated GPS; pitch that honestly).
+- Voice: local faster-whisper / Ollama-whisper only.
+
+## Data model (provision via Supabase)
+
+`profiles` (auth role: supplier | business_owner), `suppliers`, `supplier_metrics` (source synthetic|observed), `orders`, `batches`, `messages`, `disruptions` (price|capacity|reliability), `strategies`, `legal_docs`, `decisions`. Cloudinary fields: `photo_url` / `photo_public_id`, `reported_pdf_url` / `reported_pdf_public_id`, `doc_url` / `doc_public_id`.
+
+`decisions` is required for every allocation, disruption response, legal flag, and classifier escalation (`made_by` agent|human). Decision Log is a feed over this table.
+
+Auth roles: **supplier** and **business-owner**.
+
+## Features (build in this order, one vertical slice)
+
+1. Schema + auth roles
+2. AyuraNest synthetic `supplier_metrics`
+3. Simple prediction models E2E
+4. Optimizer: qty per supplier; min/max + capacity; min expected cost + weighted risk; sweep risk-weight → cost-aggressive / balanced / risk-averse; log `strategies`
+5. Disruption trigger + re-plan (spine of the demo — before polish)
+6. Explainer on real numbers
+7. Dashboard with all panels + live data
+8. Cloudinary + VLM → weasyprint/reportlab QC PDF
+9. Chat + local transcript + classifier `flagged_for_dashboard`
+10. Simulated logistics map
+11. Legal docs vs live situation → `decisions` on conflict
+12. Polish; demo opens on a live disruption, not a feature tour
+
+## Dashboard (dark, data-dense, one accent)
+
+Risk matrix, recommended allocation + expected cost/delivery-risk/quality-risk, scenario comparison including baseline, `strategies` history, Decision Log, logistics map, chat with flagged messages as cards. Re-plan must **visibly update numbers**, not only toast.
+
+## How to work
+
+Do not scaffold all features shallowly. A working re-plan loop beats a pretty static UI. Free-tier only (Supabase, Cloudinary, Maps credit, local Ollama). Photos stay on Cloudinary; Postgres stores only `secure_url` / `public_id`.

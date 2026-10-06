@@ -1,0 +1,30 @@
+.env
+.env.local
+.env.*.local
+node_modules
+dist
+.DS_Store
+supabase/.temp
+supabase/.branches
+scripts/generated_seed/
+scripts/.cache/
+
+# Build output
+web/dist/
+
+# Generated seed files
+seed_output.sql
+full_schema.sql
+
+# Test artifacts
+test-results/playwright-report/
+web/src/tests/integration/*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Playwright
+playwright-report/
+test-results/*.xml
